@@ -81,6 +81,8 @@ int main(int argc, char **argv)
    ///////////////
    // HO to LOR //
    ///////////////
+   std::cout << "\n\nMapping high-order to LOR using L^2 restriction\n\n";
+
    // Density
    GridFunction rho(&fes_rho), rho_lor(&fes_rho_lor);
    FunctionCoefficient rho_coeff(rho_fn);
@@ -99,11 +101,9 @@ int main(int argc, char **argv)
 
    GridFunctionCoefficient rho_gf_coeff(&rho);
    GridFunctionCoefficient rho_lor_gf_coeff(&rho_lor);
-   L2ProjectionGridTransfer l2_transfer_weighted(
+   L2ProjectionGridTransfer l2_transfer_weighted_1(
       fes_vel, fes_vel_lor, &rho_gf_coeff, &rho_lor_gf_coeff);
-
-   const Operator &R_vel = l2_transfer_weighted.ForwardOperator();
-   const Operator &P_vel = l2_transfer_weighted.BackwardOperator();
+   const Operator &R_vel = l2_transfer_weighted_1.ForwardOperator();
 
    R_vel.Mult(vel, vel_lor);
    compare_momentum(vel, vel_lor, rho, rho_lor, vis);
@@ -111,6 +111,8 @@ int main(int argc, char **argv)
    ///////////////
    // LOR to HO //
    ///////////////
+   std::cout << "\n\nMapping LOR to high-order using L^2 prolongation\n\n";
+
    Wx = 2.5*offx;
    Wy = 0;
 
@@ -118,11 +120,19 @@ int main(int argc, char **argv)
    P_rho.Mult(rho_lor, rho);
    compare_mass(rho, rho_lor, vis);
 
+   L2ProjectionGridTransfer l2_transfer_weighted_2(
+      fes_vel, fes_vel_lor, &rho_gf_coeff, &rho_lor_gf_coeff);
+   const Operator &P_vel = l2_transfer_weighted_2.BackwardOperator();
+
    // Velocity
+   std::cout << "\n\nMapping LOR to high-order velocity using density-weighted "
+             << "*local* L^2 prolongation\n\n";
    vel_lor.ProjectCoefficient(vel_coeff);
    P_vel.Mult(vel_lor, vel);
    compare_momentum(vel, vel_lor, rho, rho_lor, vis);
 
+   std::cout << "\n\nMapping LOR to high-order velocity using density-weighted "
+             << "*global* L^2 prolongation\n\n";
    L2ConformingProlongation l2_conf_prolongation(
       fes_vel, fes_vel_lor, &rho_gf_coeff, &rho_lor_gf_coeff);
    Operator &MmtMlorinvMm = l2_conf_prolongation.GetRestrictedMassMatrix();
@@ -131,8 +141,8 @@ int main(int argc, char **argv)
 
    GridFunction vel_rhs(&fes_vel);
    Mm.MultTranspose(vel_lor, vel_rhs);
+   vel = 0.0;
    PCG(MmtMlorinvMm, D, vel_rhs, vel, 0, 1000, 1e-28);
-
    compare_momentum(vel, vel_lor, rho, rho_lor, vis);
 
    return 0;

@@ -67,7 +67,8 @@ LORMixedMassMatrix::LORMixedMassMatrix(
          emb_tr.GetPointMat() = pmats(iref);
          emb_tr.FinalizeTransformation();
 
-         int order = fe_lor->GetOrder() + 2*fe_ho->GetOrder() + el_tr->OrderW();
+         int order
+            = fe_lor->GetOrder() + 2*(fe_ho->GetOrder() + el_tr->OrderW());
          const IntegrationRule *ir = &IntRules.Get(geom, order);
          M_mixed_el = 0.0;
          for (int i = 0; i < ir->GetNPoints(); i++)
