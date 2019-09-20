@@ -64,7 +64,7 @@ LORMixedMassMatrix::LORMixedMassMatrix(
 
          // Create the transformation that embeds the fine low-order element
          // within the coarse high-order element in reference space
-         emb_tr.GetPointMat() = pmats(iref);
+         emb_tr.GetPointMat() = pmats(ho2lor.cf_tr.embeddings[ilor].matrix);
          emb_tr.FinalizeTransformation();
 
          int order
