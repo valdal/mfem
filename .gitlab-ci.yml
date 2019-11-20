@@ -1,0 +1,6 @@
+build-debug-make-test:
+  script:
+    - pwd
+    - make build-debug 
+    - make test 
+    
