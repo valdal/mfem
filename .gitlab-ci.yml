@@ -1,4 +1,4 @@
-build-debug-make-test:
+build-debug-make-test: 
   script:
     - pwd
     - make build-debug 
