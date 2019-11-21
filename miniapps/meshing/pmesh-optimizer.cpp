@@ -323,6 +323,7 @@ int main (int argc, char *argv[])
                   "301: (|T||T^-1|)/3-1              -- 3D shape\n\t"
                   "302: (|T|^2|T^-1|^2)/9-1          -- 3D shape\n\t"
                   "303: (|T|^2)/3*tau^(2/3)-1        -- 3D shape\n\t"
+                  "311: (tau-1)^2-tau+sqrt(tau^2)    -- 3D untangling\n\t"
                   "315: (tau-1)^2                    -- 3D size\n\t"
                   "316: 0.5(sqrt(tau)-1/sqrt(tau))^2 -- 3D size\n\t"
                   "321: |T-T^-t|^2                   -- 3D shape+size\n\t"
@@ -501,6 +502,7 @@ int main (int argc, char *argv[])
       case 301: metric = new TMOP_Metric_301; break;
       case 302: metric = new TMOP_Metric_302; break;
       case 303: metric = new TMOP_Metric_303; break;
+      case 311: metric = new TMOP_Metric_311; break;
       case 315: metric = new TMOP_Metric_315; break;
       case 316: metric = new TMOP_Metric_316; break;
       case 321: metric = new TMOP_Metric_321; break;
@@ -712,7 +714,7 @@ int main (int argc, char *argv[])
    else
    {
       if ( (dim == 2 && metric_id != 22 && metric_id != 252) ||
-           (dim == 3 && metric_id != 352) )
+           (dim == 3 && metric_id != 311 && metric_id != 352) )
       {
          if (myid == 0)
          { cout << "The mesh is inverted. Use an untangling metric." << endl; }

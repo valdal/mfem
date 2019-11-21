@@ -459,7 +459,10 @@ double TMOP_Metric_211::EvalW(const DenseMatrix &Jpt) const
 
 void TMOP_Metric_211::EvalP(const DenseMatrix &Jpt, DenseMatrix &P) const
 {
-   MFEM_ABORT("Metric not implemented yet. Use metric mu_55 instead.");
+   ie.SetJacobian(Jpt.GetData());
+   const double I2b = ie.Get_I2b();
+   const double c = 2*I2b-3+(I2b)/(std::pow((I2b*I2b+eps),0.5));
+   P.Set(c, ie.Get_dI2b());
 }
 
 void TMOP_Metric_211::AssembleH(const DenseMatrix &Jpt,
@@ -467,45 +470,14 @@ void TMOP_Metric_211::AssembleH(const DenseMatrix &Jpt,
                                 const double weight,
                                 DenseMatrix &A) const
 {
-   MFEM_ABORT("Metric not implemented yet. Use metric mu_55 instead.");
-}
-
-double TMOP_Metric_252::EvalW(const DenseMatrix &Jpt) const
-{
-   // mu_252 = 0.5*(det(J) - 1)^2 / (det(J) - tau0).
-   ie.SetJacobian(Jpt.GetData());
-   const double I2b = ie.Get_I2b();
-   return 0.5*(I2b - 1.0)*(I2b - 1.0)/(I2b - tau0);
-}
-
-void TMOP_Metric_252::EvalP(const DenseMatrix &Jpt, DenseMatrix &P) const
-{
-   // mu_252 = 0.5*(det(J) - 1)^2 / (det(J) - tau0)
-   // P = (c - 0.5*c*c ) * dI2b
-   //
-   // c = (I2b - 1)/(I2b - tau0), see TMOP_Metric_352 for details
-   ie.SetJacobian(Jpt.GetData());
-   const double I2b = ie.Get_I2b();
-   const double c = (I2b - 1.0)/(I2b - tau0);
-   P.Set(c - 0.5*c*c, ie.Get_dI2b());
-}
-
-void TMOP_Metric_252::AssembleH(const DenseMatrix &Jpt,
-                                const DenseMatrix &DS,
-                                const double weight,
-                                DenseMatrix &A) const
-{
-   // c = (I2b - 1)/(I2b - tau0), see TMOP_Metric_352 for details
-   //
-   // P  = (c - 0.5*c*c ) * dI2b
-   // dP = (1 - c)^2/(I2b - tau0)*(dI2b x dI2b) + (c - 0.5*c*c)*ddI2b
    ie.SetJacobian(Jpt.GetData());
    ie.SetDerivativeMatrix(DS.Height(), DS.GetData());
    const double I2b = ie.Get_I2b();
-   const double c0 = 1.0/(I2b - tau0);
-   const double c = c0*(I2b - 1.0);
-   ie.Assemble_TProd(weight*c0*(1.0 - c)*(1.0 - c), ie.Get_dI2b(), A.GetData());
-   ie.Assemble_ddI2b(weight*(c - 0.5*c*c), A.GetData());
+   const double c0 = I2b*I2b+eps;
+   const double c1 = 2 + 1/(pow(c0,0.5)) - I2b*I2b/(pow(c0,1.5));
+   const double c2 = 2*I2b - 3 + I2b/(pow(c0,0.5));
+   ie.Assemble_TProd(weight*c1, ie.Get_dI2b(), A.GetData());
+   ie.Assemble_ddI2b(weight*c2, A.GetData());
 }
 
 double TMOP_Metric_301::EvalW(const DenseMatrix &Jpt) const
@@ -592,6 +564,44 @@ void TMOP_Metric_302::AssembleH(const DenseMatrix &Jpt,
    ie.Assemble_ddI1b(c1*ie.Get_I2b(), A.GetData());
 }
 
+double TMOP_Metric_252::EvalW(const DenseMatrix &Jpt) const
+{
+   // mu_252 = 0.5*(det(J) - 1)^2 / (det(J) - tau0).
+   ie.SetJacobian(Jpt.GetData());
+   const double I2b = ie.Get_I2b();
+   return 0.5*(I2b - 1.0)*(I2b - 1.0)/(I2b - tau0);
+}
+
+void TMOP_Metric_252::EvalP(const DenseMatrix &Jpt, DenseMatrix &P) const
+{
+   // mu_252 = 0.5*(det(J) - 1)^2 / (det(J) - tau0)
+   // P = (c - 0.5*c*c ) * dI2b
+   //
+   // c = (I2b - 1)/(I2b - tau0), see TMOP_Metric_352 for details
+   ie.SetJacobian(Jpt.GetData());
+   const double I2b = ie.Get_I2b();
+   const double c = (I2b - 1.0)/(I2b - tau0);
+   P.Set(c - 0.5*c*c, ie.Get_dI2b());
+}
+
+void TMOP_Metric_252::AssembleH(const DenseMatrix &Jpt,
+                                const DenseMatrix &DS,
+                                const double weight,
+                                DenseMatrix &A) const
+{
+   // c = (I2b - 1)/(I2b - tau0), see TMOP_Metric_352 for details
+   //
+   // P  = (c - 0.5*c*c ) * dI2b
+   // dP = (1 - c)^2/(I2b - tau0)*(dI2b x dI2b) + (c - 0.5*c*c)*ddI2b
+   ie.SetJacobian(Jpt.GetData());
+   ie.SetDerivativeMatrix(DS.Height(), DS.GetData());
+   const double I2b = ie.Get_I2b();
+   const double c0 = 1.0/(I2b - tau0);
+   const double c = c0*(I2b - 1.0);
+   ie.Assemble_TProd(weight*c0*(1.0 - c)*(1.0 - c), ie.Get_dI2b(), A.GetData());
+   ie.Assemble_ddI2b(weight*(c - 0.5*c*c), A.GetData());
+}
+
 double TMOP_Metric_303::EvalW(const DenseMatrix &Jpt) const
 {
    ie.SetJacobian(Jpt.GetData());
@@ -612,6 +622,38 @@ void TMOP_Metric_303::AssembleH(const DenseMatrix &Jpt,
    ie.SetJacobian(Jpt.GetData());
    ie.SetDerivativeMatrix(DS.Height(), DS.GetData());
    ie.Assemble_ddI1b(weight/3., A.GetData());
+}
+
+double TMOP_Metric_311::EvalW(const DenseMatrix &Jpt) const
+{
+   // mu_311 = (det(J) - 1)^2 - det(J) + (det(J)^2 + eps)^{1/2}
+   //        = (I3b - 1)^2 - I3b + sqrt(I3b^2 + eps)
+   ie.SetJacobian(Jpt.GetData());
+   const double I3b = ie.Get_I3b();
+   return (I3b - 1.0)*(I3b - 1.0) - I3b + std::sqrt(I3b*I3b + eps);
+}
+
+void TMOP_Metric_311::EvalP(const DenseMatrix &Jpt, DenseMatrix &P) const
+{
+   ie.SetJacobian(Jpt.GetData());
+   const double I3b = ie.Get_I3b();
+   const double c = 2*I3b-3+(I3b)/(std::pow((I3b*I3b+eps),0.5));
+   P.Set(c, ie.Get_dI3b());
+}
+
+void TMOP_Metric_311::AssembleH(const DenseMatrix &Jpt,
+                                const DenseMatrix &DS,
+                                const double weight,
+                                DenseMatrix &A) const
+{
+   ie.SetJacobian(Jpt.GetData());
+   ie.SetDerivativeMatrix(DS.Height(), DS.GetData());
+   const double I3b = ie.Get_I3b();
+   const double c0 = I3b*I3b+eps;
+   const double c1 = 2 + 1/(pow(c0,0.5)) - I3b*I3b/(pow(c0,1.5));
+   const double c2 = 2*I3b - 3 + I3b/(pow(c0,0.5));
+   ie.Assemble_TProd(weight*c1, ie.Get_dI3b(), A.GetData());
+   ie.Assemble_ddI3b(c2*weight, A.GetData());
 }
 
 double TMOP_Metric_315::EvalW(const DenseMatrix &Jpt) const
