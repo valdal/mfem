@@ -1,4 +1,7 @@
 build-debug-make-test: 
+  tags:
+    - quartz1154
+    - shell    
   script:
     - pwd
     - make build-debug 
