@@ -2627,7 +2627,7 @@ void HypreGMRES::Mult(const HypreParVector &b, HypreParVector &x) const
 
    if (!setup_called)
    {
-      if (print_level > 0)
+      if (print_level > 0 && print_level < 3)
       {
          time_index = hypre_InitializeTiming("GMRES Setup");
          hypre_BeginTiming(time_index);
@@ -2636,7 +2636,7 @@ void HypreGMRES::Mult(const HypreParVector &b, HypreParVector &x) const
       HYPRE_ParCSRGMRESSetup(gmres_solver, *A, b, x);
       setup_called = 1;
 
-      if (print_level > 0)
+      if (print_level > 0 && print_level < 3)
       {
          hypre_EndTiming(time_index);
          hypre_PrintTiming("Setup phase times", comm);
@@ -2645,7 +2645,7 @@ void HypreGMRES::Mult(const HypreParVector &b, HypreParVector &x) const
       }
    }
 
-   if (print_level > 0)
+   if (print_level > 0 && print_level < 3)
    {
       time_index = hypre_InitializeTiming("GMRES Solve");
       hypre_BeginTiming(time_index);
@@ -2660,15 +2660,16 @@ void HypreGMRES::Mult(const HypreParVector &b, HypreParVector &x) const
 
    if (print_level > 0)
    {
-      hypre_EndTiming(time_index);
-      hypre_PrintTiming("Solve phase times", comm);
-      hypre_FinalizeTiming(time_index);
-      hypre_ClearTiming();
+      if (print_level < 3) {
+         hypre_EndTiming(time_index);
+         hypre_PrintTiming("Solve phase times", comm);
+         hypre_FinalizeTiming(time_index);
+         hypre_ClearTiming();
+      }
 
       HYPRE_ParCSRGMRESGetNumIterations(gmres_solver, &num_iterations);
       HYPRE_ParCSRGMRESGetFinalRelativeResidualNorm(gmres_solver,
                                                     &final_res_norm);
-
       MPI_Comm_rank(comm, &myid);
 
       if (myid == 0)
