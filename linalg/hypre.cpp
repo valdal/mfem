@@ -2622,6 +2622,7 @@ void HypreGMRES::Mult(const HypreParVector &b, HypreParVector &x) const
    HYPRE_Int print_level;
 
    HYPRE_GMRESGetPrintLevel(gmres_solver, &print_level);
+   HYPRE_ParCSRGMRESSetPrintLevel(gmres_solver, print_level%3);
 
    HYPRE_ParCSRMatrixGetComm(*A, &comm);
 
@@ -2679,6 +2680,7 @@ void HypreGMRES::Mult(const HypreParVector &b, HypreParVector &x) const
                    << endl;
       }
    }
+   HYPRE_ParCSRGMRESSetPrintLevel(gmres_solver, print_level);
 }
 
 HypreGMRES::~HypreGMRES()
