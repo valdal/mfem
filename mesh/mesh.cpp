@@ -2847,6 +2847,67 @@ void Mesh::Make1D(int n, double sx)
    bdr_attributes.Append(1); bdr_attributes.Append(2);
 }
 
+void Mesh::MakePeriodic(bool px, bool py)
+{
+   const double tol = 1.0e-12;
+   const bool p[2] = {px, py};
+   bool found;
+   int i, j, k;
+
+   // intialize mapping to the identity map
+   Array<int> v2v(NumOfVertices);
+   for (i=0; i < NumOfVertices; i++)
+      v2v[i] = i;
+
+   // find boundaries
+   double sx = 0.0;
+   double sy = 0.0;
+   for (int i=0; i < NumOfVertices; i++)
+   {
+      sx = std::max(sx, vertices[i](0));
+      sy = std::max(sy, vertices[i](1));
+   }
+   const double s[2] = {sx, sy};
+
+   // update mapping along periodic boundaries
+   for (int d=0; d < 2; d++)
+   {
+     if (!p[d])
+        continue;
+
+     for (i=0; i < NumOfVertices; i++)
+      {
+         // find unmapped vertices on the periodic boundary
+         if (v2v[i] == i && std::abs(vertices[i](d)-s[d]) < tol)
+         {
+           // check to see if any vertices are already mapped to the i-th one
+           for (k=0; k < NumOfVertices; k++)
+           {
+              if (k != i && v2v[k] == i)
+                 break;
+           }
+           // search for vertex to map the i-th one to
+           found = false;
+           for (j=0; j < NumOfVertices; j++)
+           {
+              found = true;
+              for (int dd = 0; dd < 2; dd++)
+                 found = found &&
+                    (d == dd || std::abs(vertices[i](dd) - vertices[j](dd)) < tol);
+              if (found)
+                 break;
+           }
+           MFEM_VERIFY(found, "Periodic mapping failed");
+           // update mapping
+           v2v[i] = j;
+           if (k < NumOfVertices)
+              v2v[k] = j;
+         }
+      }
+   }
+   MakePeriodic(v2v);
+}
+
 void Mesh::MakePeriodic(bool px, bool py, bool pz)
 {
    const double tol = 1.0e-12;
