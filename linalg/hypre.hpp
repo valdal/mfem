@@ -575,6 +575,8 @@ int BlockInvScal(const HypreParMatrix *A, HypreParMatrix *C,
     arrays. */
 HypreParMatrix *Add(double alpha, const HypreParMatrix &A,
                     double beta,  const HypreParMatrix &B);
+HypreParMatrix *HypreParMatrixAdd(double alpha, const HypreParMatrix &A,
+                                  double beta,  const HypreParMatrix &B);
 
 /** Returns the matrix @a A * @a B. Returned matrix does not necessarily own
     row or column starts unless the bool @a own_matrix is set to true. */

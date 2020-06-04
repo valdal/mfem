@@ -1700,6 +1700,16 @@ HypreParMatrix *Add(double alpha, const HypreParMatrix &A,
    return C;
 }
 
+HypreParMatrix *HypreParMatrixAdd(double alpha, const HypreParMatrix &A,
+                                  double beta,  const HypreParMatrix &B)
+{
+   hypre_ParCSRMatrix *C_hypre;
+   hypre_ParcsrAdd(alpha, A, beta, B, &C_hypre);
+   hypre_MatvecCommPkgCreate(C_hypre);
+
+   return new HypreParMatrix(C_hypre);
+}
+
 HypreParMatrix * ParMult(const HypreParMatrix *A, const HypreParMatrix *B,
                          bool own_matrix)
 {
