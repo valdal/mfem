@@ -120,7 +120,7 @@ void Symmetrize(const int size, T *data)
 template<int dim, typename T>
 MFEM_HOST_DEVICE inline T Det(const T *data)
 {
-   return TDet<T>(ColumnMajorLayout2D<dim,dim>(), data);
+   return TDetHD<T>(ColumnMajorLayout2D<dim,dim>(), data);
 }
 
 /** @brief Return the inverse a matrix with given @a size and @a data into the
@@ -130,8 +130,8 @@ MFEM_HOST_DEVICE inline
 void CalcInverse(const T *data, T *inv_data)
 {
    typedef ColumnMajorLayout2D<dim,dim> layout_t;
-   const T det = TAdjDet<T>(layout_t(), data, layout_t(), inv_data);
-   TAssign<AssignOp::Mult>(layout_t(), inv_data, static_cast<T>(1.0)/det);
+   const T det = TAdjDetHD<T>(layout_t(), data, layout_t(), inv_data);
+   TAssignHD<AssignOp::Mult>(layout_t(), inv_data, static_cast<T>(1.0)/det);
 }
 
 /** @brief Compute C = A + alpha*B, where the matrices A, B and C are of size @a
@@ -203,11 +203,11 @@ void MultABt(const int Aheight, const int Awidth, const int Bheight,
 /// Compute the spectrum of the matrix of size dim with given @a data, returning
 /// the eigenvalues in the array @a lambda and the eigenvectors in the array @a
 /// vec (listed consecutively).
-template<int dim>
+template<int dim> MFEM_HOST_DEVICE
 void CalcEigenvalues(const double *data, double *lambda, double *vec);
 
 /// Return the i'th singular value of the matrix of size dim with given @a data.
-template<int dim>
+template<int dim> MFEM_HOST_DEVICE
 double CalcSingularvalue(const double *data, const int i);
 
 
