@@ -78,6 +78,10 @@ protected:
    // sface ids: all triangles first, then all quads
    Array<int> sface_lface;
 
+   // glob_elem_offset + local element number defines a global element numbering
+   mutable long glob_elem_offset, glob_offset_sequence;
+   void ComputeGlobalElementOffset() const;
+
    /// Create from a nonconforming mesh.
    ParMesh(const ParNCMesh &pncmesh);
 
@@ -231,6 +235,13 @@ public:
    int GetNRanks() const { return NRanks; }
    int GetMyRank() const { return MyRank; }
 
+   /** Map a global element number to a local element number. If the global
+       element is not on this processor, return -1. */
+   int GetLocalElementNum(long global_element_num) const;
+
+   /// Map a local element number to a global element number.
+   long GetGlobalElementNum(int local_element_num) const;
+
    GroupTopology gtopo;
 
    // Face-neighbor elements and vertices
@@ -309,6 +320,12 @@ public:
        as boundary (for visualization purposes) using the mfem v1.0 format. */
    virtual void Print(std::ostream &out = mfem::out) const;
 
+#ifdef MFEM_USE_ADIOS2
+   /** Print the part of the mesh in the calling processor using adios2 bp
+       format. */
+   virtual void Print(adios2stream &out) const;
+#endif
+
    /** Print the part of the mesh in the calling processor adding the interface
        as boundary (for visualization purposes) using Netgen/Truegrid format .*/
    virtual void PrintXG(std::ostream &out = mfem::out) const;
@@ -347,6 +364,10 @@ public:
    friend class ParNCMesh;
 #ifdef MFEM_USE_PUMI
    friend class ParPumiMesh;
+#endif
+
+#ifdef MFEM_USE_ADIOS2
+   friend class adios2stream;
 #endif
 };
 
