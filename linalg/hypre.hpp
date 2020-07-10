@@ -746,6 +746,10 @@ public:
    virtual void Mult(const HypreParVector &b, HypreParVector &x) const;
    virtual void Mult(const Vector &b, Vector &x) const;
 
+   /** Virtual function to get number of iterations; returns -1 if not
+       implemented in derived class. */
+   virtual int GetNumIterations() { return -1; }
+
    /** @brief Set the behavior for treating hypre errors, see the ErrorMode
        enum. The default mode in the base class is ABORT_HYPRE_ERRORS. */
    /** Currently, there are three cases in derived classes where the error flag
@@ -811,11 +815,19 @@ public:
    /// non-hypre setting
    void SetZeroInintialIterate() { iterative_mode = false; }
 
+   // Old MFEM implementation, left to avoid errors.
    void GetNumIterations(int &num_iterations)
    {
       HYPRE_Int num_it;
       HYPRE_ParCSRPCGGetNumIterations(pcg_solver, &num_it);
       num_iterations = internal::to_int(num_it);
+   }
+   // Get num iterations consistent with IterativeSolver
+   int GetNumIterations()
+   {
+      HYPRE_Int num_it;
+      HYPRE_ParCSRPCGGetNumIterations(pcg_solver, &num_it);
+      return internal::to_int(num_it);
    }
 
    /// The typecast to HYPRE_Solver returns the internal pcg_solver
@@ -840,7 +852,6 @@ class HypreGMRES : public HypreSolver
 {
 private:
    HYPRE_Solver gmres_solver;
-
    HypreSolver * precond;
 
    /// Default, generally robust, GMRES options
@@ -859,6 +870,13 @@ public:
    void SetKDim(int dim);
    void SetLogging(int logging);
    void SetPrintLevel(int print_lvl);
+   // Get num iterations consistent with IterativeSolver
+   int GetNumIterations()
+   {
+      HYPRE_Int num_it;
+      HYPRE_ParCSRGMRESGetNumIterations(gmres_solver, &num_it);
+      return internal::to_int(num_it);
+   }
 
    /// Set the hypre solver to be used as a preconditioner
    void SetPreconditioner(HypreSolver &precond);
