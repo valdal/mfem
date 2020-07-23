@@ -162,12 +162,9 @@ int main(int argc, char *argv[])
    int ser_ref_levels = 2;
    int par_ref_levels = 0;
    int order = 3;
-<<<<<<< HEAD
-=======
    bool pa = false;
    bool ea = false;
    const char *device_config = "cpu";
->>>>>>> origin/master
    int ode_solver_type = 4;
    double t_final = 10.0;
    double dt = 0.01;
@@ -192,15 +189,12 @@ int main(int argc, char *argv[])
                   "Number of times to refine the mesh uniformly in parallel.");
    args.AddOption(&order, "-o", "--order",
                   "Order (degree) of the finite elements.");
-<<<<<<< HEAD
-=======
    args.AddOption(&pa, "-pa", "--partial-assembly", "-no-pa",
                   "--no-partial-assembly", "Enable Partial Assembly.");
    args.AddOption(&ea, "-ea", "--element-assembly", "-no-ea",
                   "--no-element-assembly", "Enable Element Assembly.");
    args.AddOption(&device_config, "-d", "--device",
                   "Device configuration string, see Device::Configure().");
->>>>>>> origin/master
    args.AddOption(&ode_solver_type, "-s", "--ode-solver",
                   "ODE solver: 1 - Forward Euler,\n\t"
                   "            2 - RK2 SSP, 3 - RK3 SSP, 4 - RK4, 6 - RK6,\n\t"
@@ -321,8 +315,6 @@ int main(int argc, char *argv[])
    FunctionCoefficient u0(u0_function);
 
    ParBilinearForm *m = new ParBilinearForm(fes);
-<<<<<<< HEAD
-=======
    ParBilinearForm *k = new ParBilinearForm(fes);
    if (pa)
    {
@@ -334,9 +326,8 @@ int main(int argc, char *argv[])
       m->SetAssemblyLevel(AssemblyLevel::ELEMENT);
       k->SetAssemblyLevel(AssemblyLevel::ELEMENT);
    }
->>>>>>> origin/master
+
    m->AddDomainIntegrator(new MassIntegrator);
-   ParBilinearForm *k = new ParBilinearForm(fes);
    k->AddDomainIntegrator(new ConvectionIntegrator(velocity, -1.0));
    k->AddInteriorFaceIntegrator(
       new TransposeIntegrator(new DGTraceIntegrator(velocity, 1.0, -0.5)));
@@ -574,12 +565,6 @@ FE_Evolution::FE_Evolution(HypreParMatrix &_M, HypreParMatrix &_K,
      M(_M), K(_K), b(_b), M_solver(M.GetComm()),
      dg_solver(M, K, fes), z(_M.Height())
 {
-<<<<<<< HEAD
-   M_prec.SetType(HypreSmoother::Jacobi);
-   M_solver.SetPreconditioner(M_prec);
-   M_solver.SetOperator(M);
-
-=======
    bool pa = _M.GetAssemblyLevel()==AssemblyLevel::PARTIAL;
    bool ea = _M.GetAssemblyLevel()==AssemblyLevel::ELEMENT;
 
@@ -613,7 +598,6 @@ FE_Evolution::FE_Evolution(HypreParMatrix &_M, HypreParMatrix &_K,
    }
 
    M_solver.SetPreconditioner(*M_prec);
->>>>>>> origin/master
    M_solver.iterative_mode = false;
    M_solver.SetRelTol(1e-9);
    M_solver.SetAbsTol(0.0);
