@@ -129,22 +129,21 @@ public:
 class FE_Evolution : public TimeDependentOperator
 {
 private:
-   HypreParMatrix &M, &K;
+   OperatorHandle M, K;
    const Vector &b;
-   HypreSmoother M_prec;
+   Solver *M_prec;
    CGSolver M_solver;
-   DG_Solver dg_solver;
+   DG_Solver *dg_solver;
 
    mutable Vector z;
 
 public:
-   FE_Evolution(HypreParMatrix &_M, HypreParMatrix &_K, const Vector &_b,
-                const FiniteElementSpace &fes);
+   FE_Evolution(ParBilinearForm &_M, ParBilinearForm &_K, const Vector &_b);
 
    virtual void Mult(const Vector &x, Vector &y) const;
    virtual void ImplicitSolve(const double dt, const Vector &x, Vector &k);
 
-   virtual ~FE_Evolution() { }
+   virtual ~FE_Evolution();
 };
 
 
@@ -238,6 +237,9 @@ int main(int argc, char *argv[])
       args.PrintOptions(cout);
    }
 
+   Device device(device_config);
+   if (myid == 0) { device.Print(); }
+
    // 3. Read the serial mesh from the given mesh file on all processors. We can
    //    handle geometrically periodic meshes in this code.
    Mesh *mesh = new Mesh(mesh_file, 1, 1);
@@ -298,7 +300,7 @@ int main(int argc, char *argv[])
 
    // 7. Define the parallel discontinuous DG finite element space on the
    //    parallel refined mesh of the given polynomial order.
-   DG_FECollection fec(order, dim);
+   DG_FECollection fec(order, dim, BasisType::GaussLobatto);
    ParFiniteElementSpace *fes = new ParFiniteElementSpace(pmesh, &fec);
 
    HYPRE_Int global_vSize = fes->GlobalTrueVSize();
@@ -326,7 +328,6 @@ int main(int argc, char *argv[])
       m->SetAssemblyLevel(AssemblyLevel::ELEMENT);
       k->SetAssemblyLevel(AssemblyLevel::ELEMENT);
    }
-
    m->AddDomainIntegrator(new MassIntegrator);
    k->AddDomainIntegrator(new ConvectionIntegrator(velocity, -1.0));
    k->AddInteriorFaceIntegrator(
@@ -338,15 +339,14 @@ int main(int argc, char *argv[])
    b->AddBdrFaceIntegrator(
       new BoundaryFlowIntegrator(inflow, velocity, -1.0, -0.5));
 
-   m->Assemble();
-   m->Finalize();
    int skip_zeros = 0;
+   m->Assemble();
    k->Assemble(skip_zeros);
-   k->Finalize(skip_zeros);
    b->Assemble();
+   m->Finalize();
+   k->Finalize(skip_zeros);
 
-   HypreParMatrix *M = m->ParallelAssemble();
-   HypreParMatrix *K = k->ParallelAssemble();
+
    HypreParVector *B = b->ParallelAssemble();
 
    // 9. Define the initial conditions, save the corresponding grid function to
@@ -463,7 +463,7 @@ int main(int argc, char *argv[])
    // 10. Define the time-dependent evolution operator describing the ODE
    //     right-hand side, and perform time-integration (looping over the time
    //     iterations, ti, with a time-step dt).
-   FE_Evolution adv(*M, *K, *B, *fes);
+   FE_Evolution adv(*m, *k, *B);
 
    double t = 0.0;
    adv.SetTime(t);
@@ -537,9 +537,7 @@ int main(int argc, char *argv[])
    delete u;
    delete B;
    delete b;
-   delete K;
    delete k;
-   delete M;
    delete m;
    delete fes;
    delete pmesh;
@@ -559,11 +557,12 @@ int main(int argc, char *argv[])
 
 
 // Implementation of class FE_Evolution
-FE_Evolution::FE_Evolution(HypreParMatrix &_M, HypreParMatrix &_K,
-                           const Vector &_b, const FiniteElementSpace &fes)
+FE_Evolution::FE_Evolution(ParBilinearForm &_M, ParBilinearForm &_K,
+                           const Vector &_b)
    : TimeDependentOperator(_M.Height()),
-     M(_M), K(_K), b(_b), M_solver(M.GetComm()),
-     dg_solver(M, K, fes), z(_M.Height())
+     b(_b),
+     M_solver(_M.ParFESpace()->GetComm()),
+     z(_M.Height())
 {
    bool pa = _M.GetAssemblyLevel()==AssemblyLevel::PARTIAL;
    bool ea = _M.GetAssemblyLevel()==AssemblyLevel::ELEMENT;
@@ -607,18 +606,24 @@ FE_Evolution::FE_Evolution(HypreParMatrix &_M, HypreParMatrix &_K,
 
 void FE_Evolution::ImplicitSolve(const double dt, const Vector &x, Vector &k)
 {
-   K.Mult(x, z);
+   K->Mult(x, z);
    z += b;
-   dg_solver.SetTimeStep(dt);
-   dg_solver.Mult(z, k);
+   dg_solver->SetTimeStep(dt);
+   dg_solver->Mult(z, k);
 }
 
 void FE_Evolution::Mult(const Vector &x, Vector &y) const
 {
    // y = M^{-1} (K x + b)
-   K.Mult(x, z);
+   K->Mult(x, z);
    z += b;
    M_solver.Mult(z, y);
+}
+
+FE_Evolution::~FE_Evolution()
+{
+   delete M_prec;
+   delete dg_solver;
 }
 
 
