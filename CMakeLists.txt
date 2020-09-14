@@ -218,6 +218,15 @@ if (MFEM_USE_SUNDIALS)
   endif()
 endif()
 
+# EPIC 
+if (MFEM_USE_EPIC)
+  if (NOT (MFEM_USE_MPI AND MFEM_USE_SUNDIALS AND MFEM_USE_LAPACK) )
+    message(FATAL_ERROR " *** EPIC requires that MPI, SUNDIALS and LAPACK be enabled.")
+  else()
+    find_package(EPIC REQUIRED SUNDIALS NVector_Serial NVector_Parallel BLAS LAPACK)
+  endif()
+endif()
+
 # Mesquite
 if (MFEM_USE_MESQUITE)
   find_package(Mesquite REQUIRED)
@@ -355,7 +364,7 @@ endif()
 #    With newer versions of SuiteSparse which include METIS header using 64-bit
 #    integers, the METIS header (with 32-bit indices, as used by mfem) needs to
 #    be before SuiteSparse.
-set(MFEM_TPLS MPI_CXX OPENMP BLAS LAPACK METIS HYPRE SuiteSparse SUNDIALS PETSC
+set(MFEM_TPLS MPI_CXX OPENMP BLAS LAPACK METIS HYPRE SuiteSparse SUNDIALS EPIC PETSC
     SLEPC MESQUITE SuperLUDist STRUMPACK AXOM CONDUIT Ginkgo GNUTLS GSLIB NETCDF
     MPFR PUMI HIOP POSIXCLOCKS MFEMBacktrace ZLIB OCCA CEED RAJA UMPIRE ADIOS2)
 # Add all *_FOUND libraries in the variable TPL_LIBRARIES.

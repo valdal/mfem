@@ -103,6 +103,9 @@ const char *GetConfigStr()
 #ifdef MFEM_USE_SUNDIALS
       "MFEM_USE_SUNDIALS\n"
 #endif
+#ifdef MFEM_USE_EPIC
+      "MFEM_USE_EPIC\n"
+#endif
 #ifdef MFEM_USE_MESQUITE
       "MFEM_USE_MESQUITE\n"
 #endif
