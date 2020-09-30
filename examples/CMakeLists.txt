@@ -122,6 +122,11 @@ if (MFEM_USE_SUNDIALS)
   add_subdirectory(sundials)
 endif()
 
+# Include the examples/epic directory if EPIC is enabled.
+if (MFEM_USE_EPIC)
+  add_subdirectory(epic)
+endif()
+
 # Include the examples/sundials directory if SUNDIALS is enabled.
 if (MFEM_USE_GINKGO)
   add_subdirectory(ginkgo)

@@ -36,6 +36,9 @@ SUBDIRS =
 ifeq ($(MFEM_USE_SUNDIALS),YES)
    SUBDIRS += sundials
 endif
+ifeq ($(MFEM_USE_EPIC),YES)
+   SUBDIRS += epic
+endif
 ifeq ($(MFEM_USE_PETSC),YES)
    SUBDIRS += petsc
 endif
