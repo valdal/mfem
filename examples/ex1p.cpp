@@ -127,7 +127,7 @@ int main(int argc, char *argv[])
    //    more than 10,000 elements.
    {
       int ref_levels =
-         (int)floor(log(10000./mesh.GetNE())/log(2.)/dim);
+         (int)floor(log(1000000./mesh.GetNE())/log(2.)/dim);
       for (int l = 0; l < ref_levels; l++)
       {
          mesh.UniformRefinement();
@@ -216,74 +216,85 @@ int main(int argc, char *argv[])
    //     assembly, eliminating boundary conditions, applying conforming
    //     constraints for non-conforming AMR, static condensation, etc.
    if (static_cond) { a.EnableStaticCondensation(); }
-   a.Assemble();
+
+   {
+      const double tic = MPI_Wtime();
+      a.Assemble();
+      const double toc = MPI_Wtime();
+      if (myid == 0) {std::cout << "[Time] Assemble: " << (toc-tic) << " (s)\n";}
+   }
 
    OperatorPtr A;
    Vector B, X;
-   a.FormLinearSystem(ess_tdof_list, x, b, A, X, B);
-
-   // 13. Solve the linear system A X = B.
-   //     * With full assembly, use the BoomerAMG preconditioner from hypre.
-   //     * With partial assembly, use Jacobi smoothing, for now.
-   Solver *prec = NULL;
-   if (pa)
    {
-      if (UsesTensorBasis(fespace))
+      const double tic = MPI_Wtime();
+      a.FormLinearSystem(ess_tdof_list, x, b, A, X, B);
+      const double toc = MPI_Wtime();
+      if (myid == 0) {std::cout << "[Time] FormLinearSystem: " << (toc-tic) << " (s)\n";}
+   }
+   /*
+      // 13. Solve the linear system A X = B.
+      //     * With full assembly, use the BoomerAMG preconditioner from hypre.
+      //     * With partial assembly, use Jacobi smoothing, for now.
+      Solver *prec = NULL;
+      if (pa)
       {
-         if (algebraic_ceed)
+         if (UsesTensorBasis(fespace))
          {
-            prec = new ceed::AlgebraicSolver(a, ess_tdof_list);
-         }
-         else
-         {
-            prec = new OperatorJacobiSmoother(a, ess_tdof_list);
+            if (algebraic_ceed)
+            {
+               prec = new ceed::AlgebraicSolver(a, ess_tdof_list);
+            }
+            else
+            {
+               prec = new OperatorJacobiSmoother(a, ess_tdof_list);
+            }
          }
       }
-   }
-   else
-   {
-      prec = new HypreBoomerAMG;
-   }
-   CGSolver cg(MPI_COMM_WORLD);
-   cg.SetRelTol(1e-12);
-   cg.SetMaxIter(2000);
-   cg.SetPrintLevel(1);
-   if (prec) { cg.SetPreconditioner(*prec); }
-   cg.SetOperator(*A);
-   cg.Mult(B, X);
-   delete prec;
+      else
+      {
+         prec = new HypreBoomerAMG;
+      }
+      CGSolver cg(MPI_COMM_WORLD);
+      cg.SetRelTol(1e-12);
+      cg.SetMaxIter(2000);
+      cg.SetPrintLevel(1);
+      if (prec) { cg.SetPreconditioner(*prec); }
+      cg.SetOperator(*A);
+      cg.Mult(B, X);
+      delete prec;
 
-   // 14. Recover the parallel grid function corresponding to X. This is the
-   //     local finite element solution on each processor.
-   a.RecoverFEMSolution(X, b, x);
+      // 14. Recover the parallel grid function corresponding to X. This is the
+      //     local finite element solution on each processor.
+      a.RecoverFEMSolution(X, b, x);
 
-   // 15. Save the refined mesh and the solution in parallel. This output can
-   //     be viewed later using GLVis: "glvis -np <np> -m mesh -g sol".
-   {
-      ostringstream mesh_name, sol_name;
-      mesh_name << "mesh." << setfill('0') << setw(6) << myid;
-      sol_name << "sol." << setfill('0') << setw(6) << myid;
+      // 15. Save the refined mesh and the solution in parallel. This output can
+      //     be viewed later using GLVis: "glvis -np <np> -m mesh -g sol".
+      {
+         ostringstream mesh_name, sol_name;
+         mesh_name << "mesh." << setfill('0') << setw(6) << myid;
+         sol_name << "sol." << setfill('0') << setw(6) << myid;
 
-      ofstream mesh_ofs(mesh_name.str().c_str());
-      mesh_ofs.precision(8);
-      pmesh.Print(mesh_ofs);
+         ofstream mesh_ofs(mesh_name.str().c_str());
+         mesh_ofs.precision(8);
+         pmesh.Print(mesh_ofs);
 
-      ofstream sol_ofs(sol_name.str().c_str());
-      sol_ofs.precision(8);
-      x.Save(sol_ofs);
-   }
+         ofstream sol_ofs(sol_name.str().c_str());
+         sol_ofs.precision(8);
+         x.Save(sol_ofs);
+      }
 
-   // 16. Send the solution by socket to a GLVis server.
-   if (visualization)
-   {
-      char vishost[] = "localhost";
-      int  visport   = 19916;
-      socketstream sol_sock(vishost, visport);
-      sol_sock << "parallel " << num_procs << " " << myid << "\n";
-      sol_sock.precision(8);
-      sol_sock << "solution\n" << pmesh << x << flush;
-   }
-
+      // 16. Send the solution by socket to a GLVis server.
+      if (visualization)
+      {
+         char vishost[] = "localhost";
+         int  visport   = 19916;
+         socketstream sol_sock(vishost, visport);
+         sol_sock << "parallel " << num_procs << " " << myid << "\n";
+         sol_sock.precision(8);
+         sol_sock << "solution\n" << pmesh << x << flush;
+      }
+   */
    // 17. Free the used memory.
    if (delete_fec)
    {

@@ -15,6 +15,10 @@
 #include "petsc.hpp"
 #endif
 
+#define MFEM_DEBUG_COLOR 227
+#include "../general/debug.hpp"
+
+
 // Make sure that hypre and PETSc use the same size indices.
 #if defined(MFEM_USE_MPI) && defined(MFEM_USE_PETSC)
 #if (defined(HYPRE_BIGINT) && !defined(PETSC_USE_64BIT_INDICES)) || \
@@ -122,18 +126,24 @@ MakeRectangularBlockDiag(MPI_Comm comm, HYPRE_Int glob_num_rows,
 
 void OperatorHandle::MakePtAP(OperatorHandle &A, OperatorHandle &P)
 {
+   dbg();
    if (A.Type() != Operator::ANY_TYPE)
    {
       MFEM_VERIFY(A.Type() == P.Type(), "type mismatch in A and P");
    }
    Clear();
+   double tic = MPI_Wtime();
    switch (A.Type())
    {
       case Operator::ANY_TYPE:
+      {
+         assert(false);
          pSet(new RAPOperator(*P.Ptr(), *A.Ptr(), *P.Ptr()));
          break;
+      }
       case Operator::MFEM_SPARSEMAT:
       {
+         assert(false);
          SparseMatrix *R  = mfem::Transpose(*P.As<SparseMatrix>());
          SparseMatrix *RA = mfem::Mult(*R, *A.As<SparseMatrix>());
          delete R;
@@ -143,8 +153,11 @@ void OperatorHandle::MakePtAP(OperatorHandle &A, OperatorHandle &P)
       }
 #ifdef MFEM_USE_MPI
       case Operator::Hypre_ParCSR:
+      {
          pSet(mfem::RAP(A.As<HypreParMatrix>(), P.As<HypreParMatrix>()));
+         dbg("[Time] pSet: %f(s)", MPI_Wtime()-tic);
          break;
+      }
 #ifdef MFEM_USE_PETSC
       case Operator::PETSC_MATAIJ:
       case Operator::PETSC_MATIS:
@@ -280,7 +293,10 @@ void OperatorHandle::EliminateRowsCols(OperatorHandle &A,
       case Operator::Hypre_ParCSR:
       {
 #ifdef MFEM_USE_MPI
+         dbg();
+         double tic = MPI_Wtime();
          pSet(A.As<HypreParMatrix>()->EliminateRowsCols(ess_dof_list));
+         dbg("[Time] HypreParMatrix EliminateRowsCols: %f(s)", MPI_Wtime()-tic);
 #else
          MFEM_ABORT("type id = Hypre_ParCSR requires MFEM_USE_MPI");
 #endif

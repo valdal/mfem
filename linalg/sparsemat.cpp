@@ -16,6 +16,9 @@
 #include "../general/table.hpp"
 #include "../general/sort_pairs.hpp"
 
+#define MFEM_DEBUG_COLOR 118
+#include "../general/debug.hpp"
+
 #include <iostream>
 #include <iomanip>
 #include <cmath>
@@ -3593,6 +3596,8 @@ DenseMatrix *Mult (const SparseMatrix &A, DenseMatrix &B)
 
 DenseMatrix *RAP (const SparseMatrix &A, DenseMatrix &P)
 {
+   dbg();
+   assert(false);
    DenseMatrix R (P, 't'); // R = P^T
    DenseMatrix *AP   = Mult (A, P);
    DenseMatrix *_RAP = new DenseMatrix(R.Height(), AP->Width());
@@ -3603,13 +3608,27 @@ DenseMatrix *RAP (const SparseMatrix &A, DenseMatrix &P)
 
 DenseMatrix *RAP(DenseMatrix &A, const SparseMatrix &P)
 {
+   dbg();
+   assert(false);
+   double tic = MPI_Wtime();
    SparseMatrix *R  = Transpose(P);
+   dbg("[Time] R: %f(s)", MPI_Wtime()-tic);
+
+   tic = MPI_Wtime();
    DenseMatrix  *RA = Mult(*R, A);
+   dbg("[Time] RA: %f(s)", MPI_Wtime()-tic);
+
+   tic = MPI_Wtime();
    DenseMatrix   AtP(*RA, 't');
+   dbg("[Time] AtP: %f(s)", MPI_Wtime()-tic);
    delete RA;
+   tic = MPI_Wtime();
    DenseMatrix  *RAtP = Mult(*R, AtP);
+   dbg("[Time] RAtP: %f(s)", MPI_Wtime()-tic);
    delete R;
+   tic = MPI_Wtime();
    DenseMatrix * _RAP = new DenseMatrix(*RAtP, 't');
+   dbg("[Time] _RAP: %f(s)", MPI_Wtime()-tic);
    delete RAtP;
    return _RAP;
 }
@@ -3617,6 +3636,8 @@ DenseMatrix *RAP(DenseMatrix &A, const SparseMatrix &P)
 SparseMatrix *RAP (const SparseMatrix &A, const SparseMatrix &R,
                    SparseMatrix *ORAP)
 {
+   dbg();
+   assert(false);
    SparseMatrix *P  = Transpose (R);
    SparseMatrix *AP = Mult (A, *P);
    delete P;
@@ -3628,6 +3649,8 @@ SparseMatrix *RAP (const SparseMatrix &A, const SparseMatrix &R,
 SparseMatrix *RAP(const SparseMatrix &Rt, const SparseMatrix &A,
                   const SparseMatrix &P)
 {
+   dbg();
+   assert(false);
    SparseMatrix * R = Transpose(Rt);
    SparseMatrix * RA = Mult(*R,A);
    delete R;

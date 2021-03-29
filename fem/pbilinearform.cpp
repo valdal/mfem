@@ -16,6 +16,9 @@
 #include "fem.hpp"
 #include "../general/sort_pairs.hpp"
 
+#define MFEM_DEBUG_COLOR 87
+#include "../general/debug.hpp"
+
 namespace mfem
 {
 
@@ -123,7 +126,9 @@ void ParBilinearForm::pAllocMat()
 
 void ParBilinearForm::ParallelAssemble(OperatorHandle &A, SparseMatrix *A_local)
 {
+   dbg();
    A.Clear();
+   double tic = MPI_Wtime();
 
    if (A_local == NULL) { return; }
    MFEM_VERIFY(A_local->Finalized(), "the local matrix must be finalized");
@@ -135,9 +140,11 @@ void ParBilinearForm::ParallelAssemble(OperatorHandle &A, SparseMatrix *A_local)
       // construct a parallel block-diagonal matrix 'A' based on 'a'
       dA.MakeSquareBlockDiag(pfes->GetComm(), pfes->GlobalVSize(),
                              pfes->GetDofOffsets(), A_local);
+      dbg("[Time] MakeSquareBlockDiag: %f(s)", MPI_Wtime()-tic);
    }
    else
    {
+      assert(false);
       // handle the case when 'a' contains off-diagonal
       int lvsize = pfes->GetVSize();
       const HYPRE_Int *face_nbr_glob_ldof = pfes->GetFaceNbrGlobalDofMap();
@@ -170,13 +177,17 @@ void ParBilinearForm::ParallelAssemble(OperatorHandle &A, SparseMatrix *A_local)
    }
 
    // TODO - assemble the Dof_TrueDof_Matrix directly in the required format?
+   tic = MPI_Wtime();
    Ph.ConvertFrom(pfes->Dof_TrueDof_Matrix());
+   dbg("[Time] ConvertFrom: %f(s)", MPI_Wtime()-tic);
    // TODO: When Ph.Type() == Operator::ANY_TYPE we want to use the Operator
    // returned by pfes->GetProlongationMatrix(), however that Operator is a
    // const Operator, so we cannot store it in OperatorHandle. We need a const
    // version of class OperatorHandle, e.g. ConstOperatorHandle.
 
+   tic = MPI_Wtime();
    A.MakePtAP(dA, Ph);
+   dbg("[Time] MakePtAP: %f(s)", MPI_Wtime()-tic);
 }
 
 HypreParMatrix *ParBilinearForm::ParallelAssemble(SparseMatrix *m)
@@ -310,7 +321,12 @@ void ParBilinearForm::FormLinearSystem(
 
    // Finish the matrix assembly and perform BC elimination, storing the
    // eliminated part of the matrix.
-   FormSystemMatrix(ess_tdof_list, A);
+   {
+      const double tic = MPI_Wtime();
+      FormSystemMatrix(ess_tdof_list, A);
+      const double toc = MPI_Wtime();
+      dbg("[Time] FormSystemMatrix: %f(s)", toc-tic);
+   }
 
    const Operator &P = *pfes->GetProlongationMatrix();
    const SparseMatrix &R = *pfes->GetRestrictionMatrix();
@@ -321,11 +337,13 @@ void ParBilinearForm::FormLinearSystem(
    // multipliers, set X = 0.0 for hybridization.
    if (static_cond)
    {
+      assert(false);
       // Schur complement reduction to the exposed dofs
       static_cond->ReduceSystem(x, b, X, B, copy_interior);
    }
    else if (hybridization)
    {
+      assert(false);
       // Reduction to the Lagrange multipliers system
       HypreParVector true_X(pfes), true_B(pfes);
       P.MultTranspose(b, true_B);
@@ -338,6 +356,7 @@ void ParBilinearForm::FormLinearSystem(
    }
    else
    {
+      const double tic = MPI_Wtime();
       // Variational restriction with P
       X.SetSize(pfes->TrueVSize());
       B.SetSize(X.Size());
@@ -345,6 +364,8 @@ void ParBilinearForm::FormLinearSystem(
       R.Mult(x, X);
       p_mat.EliminateBC(p_mat_e, ess_tdof_list, X, B);
       if (!copy_interior) { X.SetSubVectorComplement(ess_tdof_list, 0.0); }
+      const double toc = MPI_Wtime();
+      dbg("[Time] Variational restriction with P: %f(s)", toc-tic);
    }
 }
 
@@ -353,6 +374,7 @@ void ParBilinearForm::FormSystemMatrix(const Array<int> &ess_tdof_list,
 {
    if (ext)
    {
+      assert(false);
       ext->FormSystemMatrix(ess_tdof_list, A);
       return;
    }
@@ -361,6 +383,7 @@ void ParBilinearForm::FormSystemMatrix(const Array<int> &ess_tdof_list,
    // eliminated part of the matrix.
    if (static_cond)
    {
+      assert(false);
       if (!static_cond->HasEliminatedBC())
       {
          static_cond->SetEssentialTrueDofs(ess_tdof_list);
@@ -371,27 +394,37 @@ void ParBilinearForm::FormSystemMatrix(const Array<int> &ess_tdof_list,
    }
    else
    {
+      double tic = MPI_Wtime();
       if (mat)
       {
+         dbg();
          const int remove_zeros = 0;
          Finalize(remove_zeros);
+         dbg("[Time] Finalize: %f(s)", MPI_Wtime()-tic);
          MFEM_VERIFY(p_mat.Ptr() == NULL && p_mat_e.Ptr() == NULL,
                      "The ParBilinearForm must be updated with Update() before "
                      "re-assembling the ParBilinearForm.");
+         tic = MPI_Wtime();
          ParallelAssemble(p_mat, mat);
+         dbg("[Time] ParallelAssemble: %f(s)", MPI_Wtime()-tic);
          delete mat;
          mat = NULL;
          delete mat_e;
          mat_e = NULL;
+         tic = MPI_Wtime();
          p_mat_e.EliminateRowsCols(p_mat, ess_tdof_list);
+         dbg("[Time] EliminateRowsCols: %f(s)", MPI_Wtime()-tic);
       }
       if (hybridization)
       {
+         assert(false);
          hybridization->GetParallelMatrix(A);
       }
       else
       {
+         tic = MPI_Wtime();
          A = p_mat;
+         dbg("[Time] A = p_mat: %f(s)", MPI_Wtime()-tic);
       }
    }
 }

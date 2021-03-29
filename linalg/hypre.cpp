@@ -16,6 +16,9 @@
 #include "linalg.hpp"
 #include "../fem/fem.hpp"
 
+#define MFEM_DEBUG_COLOR 201
+#include "../general/debug.hpp"
+
 #include <fstream>
 #include <iomanip>
 #include <cmath>
@@ -1771,12 +1774,21 @@ HypreParMatrix * ParMult(const HypreParMatrix *A, const HypreParMatrix *B,
 
 HypreParMatrix * RAP(const HypreParMatrix *A, const HypreParMatrix *P)
 {
+   dbg();
+   double tic = MPI_Wtime();
    HYPRE_Int P_owns_its_col_starts =
       hypre_ParCSRMatrixOwnsColStarts((hypre_ParCSRMatrix*)(*P));
+   dbg("[Time] hypre_ParCSRMatrixOwnsColStarts: %f(s)", MPI_Wtime()-tic);
 
    hypre_ParCSRMatrix * rap;
+
+   tic = MPI_Wtime();
    hypre_BoomerAMGBuildCoarseOperator(*P,*A,*P,&rap);
+   dbg("[Time] hypre_BoomerAMGBuildCoarseOperator: %f(s)", MPI_Wtime()-tic);
+
+   tic = MPI_Wtime();
    hypre_ParCSRMatrixSetNumNonzeros(rap);
+   dbg("[Time] hypre_ParCSRMatrixSetNumNonzeros: %f(s)", MPI_Wtime()-tic);
    // hypre_MatvecCommPkgCreate(rap);
 
    /* Warning: hypre_BoomerAMGBuildCoarseOperator steals the col_starts
@@ -1789,7 +1801,10 @@ HypreParMatrix * RAP(const HypreParMatrix *A, const HypreParMatrix *P)
       hypre_ParCSRMatrixSetColStartsOwner(*P, 1);
    }
 
-   return new HypreParMatrix(rap);
+   tic = MPI_Wtime();
+   HypreParMatrix *h = new HypreParMatrix(rap);
+   dbg("[Time] HypreParMatrix: %f(s)", MPI_Wtime()-tic);
+   return h;
 }
 
 HypreParMatrix * RAP(const HypreParMatrix * Rt, const HypreParMatrix *A,
