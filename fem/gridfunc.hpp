@@ -307,7 +307,7 @@ public:
 
    double GetDivergence(ElementTransformation &tr) const;
 
-   void GetCurl(ElementTransformation &tr, Vector &curl) const;
+   virtual void GetCurl(ElementTransformation &tr, Vector &curl) const;
 
    void GetGradient(ElementTransformation &tr, Vector &grad) const;
 
