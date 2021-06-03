@@ -166,6 +166,7 @@ public:
 
    using BilinearForm::FormLinearSystem;
    using BilinearForm::FormSystemMatrix;
+   using BilinearForm::EliminateVDofsInRHS;
 
    virtual void FormLinearSystem(const Array<int> &ess_tdof_list, Vector &x,
                                  Vector &b, OperatorHandle &A, Vector &X,
@@ -173,6 +174,9 @@ public:
 
    virtual void FormSystemMatrix(const Array<int> &ess_tdof_list,
                                  OperatorHandle &A);
+
+   virtual void EliminateVDofsInRHS(const Array<int> &vdofs, const Vector &x,
+     Vector &b);
 
    /** Call this method after solving a linear system constructed using the
        FormLinearSystem method to recover the solution as a ParGridFunction-size
